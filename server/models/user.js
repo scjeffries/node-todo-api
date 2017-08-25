@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
+const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema({
     email: {
@@ -46,6 +47,13 @@ UserSchema.methods.generateAuthToken = function() {
     });
 };
 
+UserSchema.methods.toJSON = function() {
+    const user = this;
+    const userObject = user.toObject();
+
+    return _.pick(userObject, ['_id', 'email']);
+};
+
 UserSchema.statics.findByToken = function(token) {
     const User = this;
     let decoded;
@@ -66,12 +74,23 @@ UserSchema.statics.findByToken = function(token) {
     });
 };
 
-UserSchema.methods.toJSON = function() {
+UserSchema.pre('save', function(next) {
     const user = this;
-    const userObject = user.toObject();
 
-    return _.pick(userObject, ['_id', 'email']);
-};
+    // check if password was modified
+    // times when we save the document where the password isn't updated which means it is already hashed
+    // this middleware will run on every save, so we don't want to accidentally hash the hash
+    if(user.isModified('password')) {  // returns true if password is modified, so need to encrypt it
+        bcrypt.genSalt(10, (err, salt) => {
+            bcrypt.hash(user.password, salt, (err, hash) => {
+                user.password = hash;
+                next();
+            });
+        });
+    } else {
+        next();
+    }
+});
 
 const User = mongoose.model('User', UserSchema);
 
