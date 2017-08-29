@@ -98,9 +98,10 @@ app.patch('/todos/:id', (req, res) => {
     });
 });
 
+// register
 app.post('/users', (req, res) => {
     const user = new User(_.pick(req.body, ['email', 'password']));  // pass the object with email/pwd directly to User
-
+    
     user.save().then(() => {
         return user.generateAuthToken();
     }).then((token) => {
@@ -110,10 +111,12 @@ app.post('/users', (req, res) => {
     });
 });
 
+// get your user
 app.get('/users/me', authenticate, (req, res) => {
     res.send(req.user);
 });
 
+// login
 app.post('/users/login', (req, res) => {
     const credentials = _.pick(req.body, ['email', 'password']);
 
@@ -124,6 +127,15 @@ app.post('/users/login', (req, res) => {
             res.header('x-auth', token).send(user);
         });
     }).catch((err) => {
+        res.status(400).send();
+    });
+});
+
+// logout
+app.delete('/users/me/token', authenticate, (req, res) => {
+    req.user.removeToken(req.token).then(() => {
+        res.send();
+    }, () => {
         res.status(400).send();
     });
 });
