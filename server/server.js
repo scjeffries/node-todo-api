@@ -114,6 +114,20 @@ app.get('/users/me', authenticate, (req, res) => {
     res.send(req.user);
 });
 
+app.post('/users/login', (req, res) => {
+    const credentials = _.pick(req.body, ['email', 'password']);
+
+    User.findByCredentials(credentials.email, credentials.password).then((user) => {
+        // using return here keeps the chain alive so any errors in the .then part will trigger the catch block
+        // otherwise it will just hang
+        return user.generateAuthToken().then((token) => {
+            res.header('x-auth', token).send(user);
+        });
+    }).catch((err) => {
+        res.status(400).send();
+    });
+});
+
 app.listen(port, () => {
     console.log(`Started on port ${port}`);
 });
